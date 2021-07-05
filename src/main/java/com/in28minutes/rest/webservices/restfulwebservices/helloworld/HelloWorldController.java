@@ -26,5 +26,4 @@ public class HelloWorldController {
 //			throw new RuntimeException("Something's wrong");
 			return new HelloWorldBean(String.format("Hello %s", name));
 		}
-
 }
