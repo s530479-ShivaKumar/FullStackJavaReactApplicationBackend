@@ -1,6 +1,7 @@
 package com.in28minutes.rest.webservices.restfulwebservices.todo;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,33 +14,36 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:4200")
-public class TodoResource {
+public class TodoJPAResource {
 	
 	@Autowired
 	private TodoHardCodedService todoService;
 	
-	@GetMapping("/users/{userName}/todos")
+	@Autowired
+	private TodoJPARepository todoJPARepository;
+	
+	@GetMapping("/jpa/users/{userName}/todos")
 	public List<Todo> getAllTodos(@PathVariable String userName)
 	{
-		return todoService.findAll();
+		return todoJPARepository.findByUsername(userName);
 	}
 	
-	@GetMapping("/users/{userName}/todos/{id}")
+	@GetMapping("/jpa/users/{userName}/todos/{id}")
 	public Todo getATodo(@PathVariable String userName, @PathVariable long id)
 	{
-		return todoService.findById(id);
+		return todoJPARepository.findById(id).isPresent() ? todoJPARepository.findById(id).get() : null;
 	}
 	
-	@PostMapping("/users/{userName}/todos")
-	public ResponseEntity<Void> postATodo(@PathVariable String userName, @RequestBody Todo todo)
+	@PostMapping("/jpa/users/{userName}/todos")
+	public ResponseEntity<Void> createTodo(@PathVariable String userName, @RequestBody Todo todo)
 	{
-		Todo createdTodo = todoService.save(todo);
+		todo.setUserName(userName);
+		Todo createdTodo = todoJPARepository.save(todo);
 		
 		URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
 				.path("/{id}").buildAndExpand(createdTodo.getId()).toUri();
@@ -47,20 +51,21 @@ public class TodoResource {
 		return ResponseEntity.created(uri).build();
 	}
 	
-	@PutMapping("/users/{userName}/todos/{id}")
-	public ResponseEntity<Todo> updateATodo(@PathVariable String userName, @PathVariable long id, @RequestBody Todo todo)
+	@PutMapping("/jpa/users/{userName}/todos/{id}")
+	public ResponseEntity<Todo> updateTodo(@PathVariable String userName, @PathVariable long id, @RequestBody Todo todo)
 	{
-		Todo updatedTodo = todoService.save(todo);
+		todo.setUserName(userName);
+		Date d = todo.getTargetDate();
+		todo.setTargetDate(new Date(d.getTime() + (1000 * 60 * 60 * 5)));
+		
+		Todo updatedTodo = todoJPARepository.save(todo);
 		return new ResponseEntity<Todo>(updatedTodo, HttpStatus.OK);
 	}
 	
-	@DeleteMapping("/users/{userName}/todos/{id}")
+	@DeleteMapping("/jpa/users/{userName}/todos/{id}")
 	public ResponseEntity<Void> deleteTodo(@PathVariable String userName, @PathVariable long id)
 	{
-		Todo todo = todoService.deleteById(id);
-		if(todo!=null)
-			return ResponseEntity.noContent().build();
-		
-		return ResponseEntity.notFound().build();
+		todoJPARepository.deleteById(id);
+		return ResponseEntity.noContent().build();
 	}
 }
